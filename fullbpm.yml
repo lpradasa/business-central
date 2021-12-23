@@ -1,0 +1,159 @@
+apiVersion: v1
+items:
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: authoring
+      app.kubernetes.io/component: authoring
+      app.kubernetes.io/instance: authoring
+      name: authoring
+    name: authoring
+  spec:
+    lookupPolicy:
+      local: false
+  status:
+    dockerImageRepository: ""
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: authoring
+      app.kubernetes.io/component: authoring
+      app.kubernetes.io/instance: authoring
+      name: authoring
+    name: authoring
+  spec:
+    nodeSelector: null
+    output:
+      to:
+        kind: ImageStreamTag
+        name: authoring:7.44.0.Final
+    postCommit: {}
+    resources: {}
+    source:
+      git:
+        ref: master
+        uri: ssh://git@gitlab.cajaviviendapopular.gov.co/infraestructura/process-management/authoring.git
+      sourceSecret:
+        name: gitlab-cvp-secret
+      type: Git
+    strategy:
+      dockerStrategy:
+        from:
+          kind: ImageStreamTag
+          name: jbpm-wb:latest
+        envFrom:
+        - secretRef:
+          name: authoring-env-secret
+      type: Docker
+    triggers:
+    - github:
+        secret: AQrllgBigMialpbhc9E6
+      type: GitHub
+    - generic:
+        secret: 3c_pYviGpKAUEJgDCxEb
+      type: Generic
+    - type: ConfigChange
+    - imageChange: {}
+      type: ImageChange
+  status:
+    lastVersion: 0
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"authoring:7.44.0.Final"},"fieldPath":"spec.template.spec.containers[?(@.name==\"authoring\")].image"}]'
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: authoring
+      app.kubernetes.io/component: authoring
+      app.kubernetes.io/instance: authoring
+      name: authoring
+    name: authoring
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        deployment: authoring
+        name: authoring
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          openshift.io/generated-by: OpenShiftNewApp
+        creationTimestamp: null
+        labels:
+          deployment: authoring
+          name: authoring
+      spec:
+        volumes:
+          - name: git-volume
+            persistentVolumeClaim:
+              claimName: jbpm-git-01              
+        containers:
+        - image: 'authoring:7.44.0.Final'
+          name: authoring
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          - containerPort: 8001
+            protocol: TCP
+          resources: {}
+          volumeMounts:
+            - name: git-volume
+              mountPath: /opt/jboss/wildfly/bpmgitrepo                        
+          envFrom:
+            - secretRef:
+                name: authoring-env-secret
+  status: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: authoring
+      app.kubernetes.io/component: authoring
+      app.kubernetes.io/instance: authoring
+      name: authoring
+    name: authoring
+  spec:
+    ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      deployment: authoring
+      name: authoring
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: authoring
+    labels:
+      app: authoring
+      app.kubernetes.io/component: authoring
+      app.kubernetes.io/instance: authoring
+      name: authoring
+  spec:
+    host: authoring.cajaviviendapopular.gov.co
+    to:
+      kind: Service
+      name: authoring
+      weight: 100
+    port:
+      targetPort: 8080-tcp
+    wildcardPolicy: None
+kind: List
+metadata: {}

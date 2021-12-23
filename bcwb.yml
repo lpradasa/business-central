@@ -1,0 +1,206 @@
+apiVersion: v1
+items:
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: business-central
+      app.kubernetes.io/component: business-central
+      app.kubernetes.io/instance: business-central
+      name: business-central
+    name: jbpm-wb
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - annotations:
+        openshift.io/imported-from: jboss/jbpm-server-full:latest
+      from:
+        kind: DockerImage
+        name: jboss/jbpm-server-full:latest
+      generation: null
+      importPolicy: {}
+      name: latest
+      referencePolicy:
+        type: ""
+  status:
+    dockerImageRepository: ""
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: business-central
+      app.kubernetes.io/component: business-central
+      app.kubernetes.io/instance: business-central
+      name: business-central
+    name: business-central
+  spec:
+    lookupPolicy:
+      local: false
+  status:
+    dockerImageRepository: ""
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: business-central
+      app.kubernetes.io/component: business-central
+      app.kubernetes.io/instance: business-central
+      name: business-central
+    name: business-central
+  spec:
+    nodeSelector: null
+    output:
+      to:
+        kind: ImageStreamTag
+        name: business-central:7.44.0.Final
+    postCommit: {}
+    resources: {}
+    source:
+      git:
+        ref: master
+        uri: ssh://git@gitlab.cajaviviendapopular.gov.co/infraestructura/process-management/business-central.git
+      sourceSecret:
+        name: gitlab-cvp-secret
+      type: Git
+    strategy:
+      dockerStrategy:
+        from:
+          kind: ImageStreamTag
+          name: jbpm-wb:latest
+        envFrom:
+        - secretRef:
+          name: business-central-env-secret
+      type: Docker
+    triggers:
+    - github:
+        secret: AQrllgBigMialpbhc9E6
+      type: GitHub
+    - generic:
+        secret: 3c_pYviGpKAUEJgDCxEb
+      type: Generic
+    - type: ConfigChange
+    - imageChange: {}
+      type: ImageChange
+  status:
+    lastVersion: 0
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"business-central:7.44.0.Final"},"fieldPath":"spec.template.spec.containers[?(@.name==\"business-central\")].image"}]'
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: business-central
+      app.kubernetes.io/component: business-central
+      app.kubernetes.io/instance: business-central
+      name: business-central
+    name: business-central
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        deployment: business-central
+        name: business-central
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          openshift.io/generated-by: OpenShiftNewApp
+        creationTimestamp: null
+        labels:
+          deployment: business-central
+          name: business-central
+      spec:
+        volumes:
+          - name: certs-volume
+            secret:
+              secretName: wildcard-secret
+          - name: keystores-volume
+            secret:
+              secretName: wildcard-secret
+          - name: git-volume
+            persistentVolumeClaim:
+              claimName: jbpm-git-01              
+        containers:
+        - image: 'business-central:7.44.0.Final'
+          name: business-central
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          - containerPort: 8001
+            protocol: TCP
+          - containerPort: 8443
+            protocol: TCP
+          resources: {}
+          volumeMounts:
+            - name: certs-volume
+              mountPath: /etc/x509/https/
+            - name: keystores-volume
+              mountPath: /opt/jboss/wildfly/standalone/configuration/keystores
+            - name: git-volume
+              mountPath: /opt/jboss/wildfly/bpmgitrepo                        
+          envFrom:
+            - secretRef:
+                name: business-central-env-secret
+  status: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: business-central
+      app.kubernetes.io/component: business-central
+      app.kubernetes.io/instance: business-central
+      name: business-central
+    name: business-central
+  spec:
+    ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    - name: 8443-tcp
+      port: 8443
+      protocol: TCP
+      targetPort: 8443
+    selector:
+      deployment: business-central
+      name: business-central
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: business-central
+    labels:
+      app: business-central
+      app.kubernetes.io/component: business-central
+      app.kubernetes.io/instance: business-central
+      name: business-central
+  spec:
+    host: processwb.cajaviviendapopular.gov.co
+    to:
+      kind: Service
+      name: business-central
+      weight: 100
+    port:
+      targetPort: 8443-tcp
+    tls:
+      termination: passthrough
+      insecureEdgeTerminationPolicy: Redirect
+    wildcardPolicy: None
+kind: List
+metadata: {}

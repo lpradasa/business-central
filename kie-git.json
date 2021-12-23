@@ -1,0 +1,10 @@
+{
+  "realm": "curaduria-social",
+  "auth-server-url": "https://sso.cajaviviendapopular.gov.co/auth/",
+  "ssl-required": "external",
+  "resource": "kie-git",
+  "credentials": {
+    "secret": "d7c95e85-3f66-446d-951a-f8e0c000a924"
+  },
+  "confidential-port": 0
+}
